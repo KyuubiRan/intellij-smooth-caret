@@ -1,13 +1,14 @@
 package dev.gorokhov.smoothcaret
 
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.markup.CustomHighlighterRenderer
 import com.intellij.openapi.editor.markup.RangeHighlighter
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints
 import javax.swing.Timer
+import kotlin.math.abs
 
 class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHighlighterRenderer {
     private var currentX: Double = 0.0
@@ -85,13 +86,24 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
         targetY = currentY
     }
 
+    private fun getScreenRefreshRate(): Int {
+        val ge = GraphicsEnvironment.getLocalGraphicsEnvironment()
+        val gd = ge.screenDevices
+        var refreshRate = 60
+        for (device in gd) {
+            val mode = device.displayMode
+            refreshRate = mode.refreshRate
+        }
+        return refreshRate
+    }
+
     private fun ensureTimerStarted(editor: Editor) {
         if (timer == null) {
-            timer = Timer(16) { // ~60 FPS
+            timer = Timer(1000 / getScreenRefreshRate()) {
                 if (!editor.isDisposed) {
                     val dx = targetX - currentX
                     val dy = targetY - currentY
-                    if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
+                    if (abs(dx) > 0.01 || abs(dy) > 0.01) {
                         currentX += dx * 0.3
                         currentY += dy * 0.3
                         editor.contentComponent.repaint()
